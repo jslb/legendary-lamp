@@ -1,8 +1,14 @@
 #!/bin/bash
 
-artistName="Taylor Swift"
+echo "Enter Your Artist:"
+read artistName
+echo "Enter Your Song:"
+read songName
+echo "Chosen artist and song: $songName by $artistName"
+
+#artistName="Taylor Swift"
 artistName=$(echo ${artistName// /%20})
-songName="Red"
+#songName="Red"
 songName=$(echo ${songName// /%20})
 
 lyric_endpoint="https://private-anon-b06597b77b-lyricsovh.apiary-proxy.com/v1"
