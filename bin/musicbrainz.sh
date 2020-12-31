@@ -5,7 +5,8 @@
 mb_endpoint='http://musicbrainz.org/ws/2/recording/?query=artist:'
 #artist='ac\%2Fdc'
 #artist='lorde'
-artistName='easy life'
+artistName='Easy Life'
+#artistName='taylor swift' #does not work if wrong case
 artist=$(echo ${artistName// /%20})
 limit='&limit=100'
 declare -i offset_val=0
@@ -17,7 +18,9 @@ curl GET $url -H "Accept: application/json" > ../tmp/$artist.data-$offset_val
 
 declare -i count=$(cat ../tmp/$artist.data-$offset_val | jq '.count')
 
-cat ../tmp/$artist.data-$offset_val | jq '.recordings[] | {title: .title, artist: ."artist-credit"[].name}' > ../tmp/$artist.songlist
+cat ../tmp/$artist.data-$offset_val | jq -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistName\") | {title: .title, artist: .\"artist-credit\"[].name}" > ../tmp/$artist.songlist
+#cat ../tmp/$artist.data-$offset_val | jq -c '.recordings[] | select(."artist-credit"[].name=="Easy Life") | {title: .title, artist: ."artist-credit"[].name}' > ../tmp/$artist.songlist
+
 
 if [[ $count > 100 ]];
 then
@@ -27,15 +30,10 @@ then
 		offset="&offset=${offset_val}"
 		url=${mb_endpoint}\"${artist}\"${limit}${offset}
 		curl GET $url -H "Accept: application/json" > ../tmp/$artist.data-$offset_val
-		#cat ../tmp/$artist.data-$offset_val | jq  '.recordings[].title' >> ../tmp/$artist.songlist
-		cat ../tmp/$artist.data-$offset_val | jq '.recordings[] | {title: .title, artist: ."artist-credit"[].name}' >> ../tmp/$artist.songlist
-		
+        cat ../tmp/$artist.data-$offset_val | jq -c -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistName\") | {title: .title, artist: .\"artist-credit\"[].name}" >> ../tmp/$artist.songlist
+		#cat ../tmp/$artist.data-$offset_val | jq -c '.recordings[] | select(."artist-credit"[].name=="Easy Life") | {title: .title, artist: ."artist-credit"[].name}' >> ../tmp/$artist.songlist
 	done
 	echo finsihed
 	rm ../tmp/$artist.data-*
 fi
 
-jq -r '.title' ../tmp/$artist.songlist | while read i; do
-    # do stuff with $i
-	echo i: "$i"
-done
