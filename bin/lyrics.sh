@@ -18,6 +18,7 @@ curl -s $url -H "Accept: application/json" > ../tmp/$artist.data-$offset_val
 declare -i count=$(cat ../tmp/$artist.data-$offset_val | jq '.count')
 
 cat ../tmp/$artist.data-$offset_val | jq -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistNameSpaced\") | {title: .title, artist: .\"artist-credit\"[].name}" > ../tmp/$artist.songlist
+echo Getting songs by $artistNameSpaced ...
 
 if [[ $count > 100 ]];
 then
@@ -29,13 +30,15 @@ then
         curl -s $url -H "Accept: application/json" > ../tmp/$artist.data-$offset_val
         cat ../tmp/$artist.data-$offset_val | jq -c -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistNameSpaced\") | {title: .title, artist: .\"artist-credit\"[].name}" >> ../tmp/$artist.songlist
         #cat ../tmp/$artist.data-$offset_val | jq -c '.recordings[] | select(."artist-credit"[].name=="Easy Life") | {title: .title, artist: ."artist-credit"[].name}' >> ../tmp/$artist.songlist
+		echo "... over 100 songs! $artistNameSpaced's been busy!"
     done
-    echo finsihed
+    #echo finsihed
     rm ../tmp/$artist.data-*
 fi
 
 declare -i totalWordCount=0
 declare -i songCount=0
+echo Getting lyrics ...
 while IFS= read -r line
 do
     #echo "$line"
@@ -67,8 +70,8 @@ do
 done < ../tmp/$artist.songlist
 
 declare -i averageWord=$(( $totalWordCount / $songCount ))
-echo totalWordCount: $totalWordCount sonCount: $songCount
-echo average: $averageWord
-
+echo "$songCount songs returned lyrics, for a total word count of $totalWordCount giving an average of $averageWord words per song by artist $artistNameSpaced"
+#echo totalWordCount: $totalWordCount sonCount: $songCount
+#echo average: $averageWord
 
 rm ../tmp/$artist.*
