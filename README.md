@@ -12,6 +12,7 @@ This is a bash shell script that uses the lyrics.ovh and musicbrainz APIs to cal
 
 Requirements:
 * jq installed
+https://stedolan.github.io/jq/download/?fbclid=IwAR1nMeE7xT3O0RiahxWuhTao7ixzwRCD-mpT0zkqUzcT-ixZU0M_xF49WT8
 
 How to Run:
 * Clone the repository
