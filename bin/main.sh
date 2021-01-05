@@ -1,14 +1,14 @@
 #!/bin/bash
 
 #Get artist name from user
-echo "Enter Your Artist:"
+printf "Ready to get some lyrics? The search is case sesnitive so be careful to capitalise names correctly!\nEnter Your Artists name:\n"
 read artistName
 artistNameSpaced=$artistName
 echo "Chosen artist: $artistName"
 
 #Create musicbrainz url for intial curl
 artistName=$(echo ${artistName// /%20})
-artist=$(echo ${artistName// /%20}) ##test no echo
+artist=$(echo ${artistName// /%20})
 mb_endpoint='http://musicbrainz.org/ws/2/recording/?query=artist:'
 #Musicbrainz limit the number of responses
 #Set up vars for offset and limit
@@ -26,6 +26,13 @@ echo Getting songs by $artistNameSpaced ...
 #Get total recordings count for artist
 declare -i count=$(cat ../tmp/$artist.data-$offset_val | jq '.count')
 
+if [[ $count == 0 ]];
+then
+	printf "Whoops! Looks like something went wrong. The search returned no songs :(\nIt's likely the capitalisation wasn't quite right, have a look at these examples and run the program again when you're ready\n Incorrect: tina turner\tCorrect: Tina Turner\n Incorrect: The beatles\tCorrect: The Beatles\n Incorrect: QUEEN\tCorrect: Queen\n\nIf this is the second time you're seeing this message for the same artist it might be that they have 0 songs in the database, if you think this is unlikley have another go at getting the capitals right for the search :)"	
+	rm ../tmp/$artist.*
+	exit
+fi
+
 #If number of recordings (count) exceeds limit (100), produce and perform remaining curl requests
 if [[ $count > 100 ]];
 then
@@ -40,11 +47,12 @@ then
 		#Extract songs with artist-credit[].name matching users artist and store
         cat ../tmp/$artist.data-$offset_val | jq -c -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistNameSpaced\") | {title: .title, artist: .\"artist-credit\"[].name}" >> ../tmp/$artist.songlist
 
-		echo "... $artistNameSpaced is mentioned in over $offset_val recordings! Looks like someones been busy!"
+		echo "... $artistNameSpaced is mentioned in over $offset_val database entires! Looks like someones been busy!"
 		#The Musicbrainz api has rate limiting, max requests are capped at 1 request per second
 		#This ensures requests are kept below the limit
 		sleep 1
     done
+printf "Just in case $offset_val songs seemed like a lot, don't worry, duplicates from the list have been removed and $artistNameSpaced has been verifed as the artist for every song on the list!\n\tNote: Remixes and re-releases with a different song title will still be included in the lyric search ..."
 fi
 
 #Removes other credited (featured) artists and duplicate songs (exact matches) from the data
@@ -55,7 +63,9 @@ rm ../tmp/$artist.songlist.tmp
 declare -i totalWordCount=0
 declare -i songCount=0
 
-echo Getting lyrics ...
+lineCount=$(wc -l < ../tmp/$artist.songlist)
+
+printf "\n... Getting lyrics for $lineCount songs now..."
 
 #Get lyrics for each song from data
 while IFS= read -r line
@@ -95,11 +105,11 @@ done < ../tmp/$artist.songlist
 
 #Calculate average words per song and print user message with further options
 declare -i averageWord=$(( $totalWordCount / $songCount ))
-printf "**********************\n$songCount songs returned lyrics, for a total word count of $totalWordCount giving an average of $averageWord words per song by artist $artistNameSpaced \n**********************\nMore options: to print the full list of songs enter 1, to see the lyrics for a song press 2, to exit type 3 or 'exit'\n"
+printf "\n**********************\n$songCount songs returned lyrics, for a total word count of $totalWordCount giving an average of $averageWord words per song by artist $artistNameSpaced \n**********************\nMore options: to print the full list of songs enter 1, to see the lyrics for a song press 2, to see the stats again press 3 and to exit type 4 or 'exit'\n"
 read options
 
 #Additional options while loop
-while [[ $options == 1 || $options == 2 ]];
+while [[ $options == 1 || $options == 2 || $options == 3  ]];
 do
 	#Option 1: lists all songs by target artist
 	if [[ $options == 1 ]];
@@ -136,13 +146,17 @@ do
 		#If user input is Yes, print word count
 		if [ $wordCountInput == "y" ] || [ $wordCountInput == "Y" ];
 		then
-			echo "*****************\n"
+			echo "*****************"
 			cat ../tmp/$artist.lyrics | jq "if select(.song==\"$chosenSong\") then .wordCount else empty end"
-			echo "*****************\n"
+			echo "*****************"
 		fi
+	#Option 3: see the stats again
+	elif [[ $options == 3 ]];
+    then
+        printf "\n***************** $artistNameSpaced's stats *****************\n\tNumber of verified releases:\t\t$lineCount\n\tNumber of songs with lyrics available:\t$songCount\n\tAverage word count per song:\t\t$averageWord\n\tTotal Word Count:\t\t\t$totalWordCount\n\n"
 	fi
 	#Loop back to offer additional option again
-	echo "More options: to print the full list of songs enter 1, to see the lyrics for a song press 2, to exit type 3 or 'exit'"
+	echo "More options: to print the full list of songs enter 1, to see the lyrics for a song press 2, to see the stats again press 3 and to exit type 4 or 'exit'"
 	read options
 
 done
