@@ -37,3 +37,8 @@ Enter the number next to the target song
 After the lyrics have been printed there is a Y/N option to display the word count of the chosen song.
 The end of this returns teh user to the more options prompt.
 
+Some fast examples to get you started:
+* Niko B (Super fast -returns 1 song)
+* Easy Life (Takes a few mins -returns lyrics for 12 songs)
+* Death Grips (Returns about 100 songs with lyrics)
+
