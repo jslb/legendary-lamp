@@ -8,28 +8,27 @@ echo "Chosen artist: $artistName"
 
 #Create musicbrainz url for intial curl
 artistName=$(echo ${artistName// /%20})
-artist=$(echo ${artistName// /%20})
 mb_endpoint='http://musicbrainz.org/ws/2/recording/?query=artist:'
 #Musicbrainz limit the number of responses
 #Set up vars for offset and limit
 limit='&limit=100'
 declare -i offset_val=0
 offset="&offset=${offset_val}"
-url=${mb_endpoint}\"${artist}\"${limit}${offset}
+url=${mb_endpoint}\"${artistName}\"${limit}${offset}
 
 #Perform first curl and store data
-curl -s $url -H "Accept: application/json" -H "User-Agent: MyAppliction/1.0.0 (jodiebarnsley27@gmail.com)" > ../tmp/$artist.data-$offset_val
+curl -s $url -H "Accept: application/json" -H "User-Agent: MyAppliction/1.0.0 (jodiebarnsley27@gmail.com)" > ../tmp/$artistName.data-$offset_val
 
 #Extract songs with artist-credit[].name matching users artist and store
-cat ../tmp/$artist.data-$offset_val | jq -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistNameSpaced\") | {title: .title, artist: .\"artist-credit\"[].name}" > ../tmp/$artist.songlist
+cat ../tmp/$artistName.data-$offset_val | jq -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistNameSpaced\") | {title: .title, artist: .\"artist-credit\"[].name}" > ../tmp/$artistName.songlist
 echo Getting songs by $artistNameSpaced ...
 #Get total recordings count for artist
-declare -i count=$(cat ../tmp/$artist.data-$offset_val | jq '.count')
+declare -i count=$(cat ../tmp/$artistName.data-$offset_val | jq '.count')
 
 if [[ $count == 0 ]];
 then
 	printf "Whoops! Looks like something went wrong. The search returned no songs :(\nIt's likely the capitalisation wasn't quite right, have a look at these examples and run the program again when you're ready\n Incorrect: tina turner\tCorrect: Tina Turner\n Incorrect: The beatles\tCorrect: The Beatles\n Incorrect: QUEEN\tCorrect: Queen\n\nIf this is the second time you're seeing this message for the same artist it might be that they have 0 songs in the database, if you think this is unlikley have another go at getting the capitals right for the search :)"	
-	rm ../tmp/$artist.*
+	rm ../tmp/$artistName.*
 	exit
 fi
 
@@ -41,11 +40,11 @@ then
 		#Prepare the new url
         offset_val=$offset_val+100
         offset="&offset=${offset_val}"
-        url=${mb_endpoint}\"${artist}\"${limit}${offset}
+        url=${mb_endpoint}\"${artistName}\"${limit}${offset}
 		#Perform the curl
-        curl -s $url -H "Accept: application/json" -H "User-Agent: MyAppliction/1.0.0 (jodiebarnsley27@gmail.com)" > ../tmp/$artist.data-$offset_val
+        curl -s $url -H "Accept: application/json" -H "User-Agent: MyAppliction/1.0.0 (jodiebarnsley27@gmail.com)" > ../tmp/$artistName.data-$offset_val
 		#Extract songs with artist-credit[].name matching users artist and store
-        cat ../tmp/$artist.data-$offset_val | jq -c -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistNameSpaced\") | {title: .title, artist: .\"artist-credit\"[].name}" >> ../tmp/$artist.songlist
+        cat ../tmp/$artistName.data-$offset_val | jq -c -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistNameSpaced\") | {title: .title, artist: .\"artist-credit\"[].name}" >> ../tmp/$artistName.songlist
 
 		echo "... $artistNameSpaced is mentioned in over $offset_val database entires! Looks like someones been busy!"
 		#The Musicbrainz api has rate limiting, max requests are capped at 1 request per second
@@ -56,14 +55,14 @@ printf "Just in case $offset_val songs seemed like a lot, don't worry, duplicate
 fi
 
 #Removes other credited (featured) artists and duplicate songs (exact matches) from the data
-sed "/$artistNameSpaced/!d" ../tmp/$artist.songlist > ../tmp/$artist.songlist.tmp
-awk '!seen[$0]++' ../tmp/$artist.songlist.tmp > ../tmp/$artist.songlist
-rm ../tmp/$artist.songlist.tmp
+sed "/$artistNameSpaced/!d" ../tmp/$artistName.songlist > ../tmp/$artistName.songlist.tmp
+awk '!seen[$0]++' ../tmp/$artistName.songlist.tmp > ../tmp/$artistName.songlist
+rm ../tmp/$artistName.songlist.tmp
 
 declare -i totalWordCount=0
 declare -i songCount=0
 
-lineCount=$(wc -l < ../tmp/$artist.songlist)
+lineCount=$(wc -l < ../tmp/$artistName.songlist)
 
 printf "\n... Getting lyrics for $lineCount songs now..."
 
@@ -100,9 +99,9 @@ do
 	fi
 
 	#Store all relevant data
-	echo $lyrics | jq ". | {song: \"$songNameSpaced\", lyrics: \"$lyricsClean\", wordCount: \"$wordCount\"}" >> ../tmp/$artist.lyrics
+	echo $lyrics | jq ". | {song: \"$songNameSpaced\", lyrics: \"$lyricsClean\", wordCount: \"$wordCount\"}" >> ../tmp/$artistName.lyrics
 
-done < ../tmp/$artist.songlist
+done < ../tmp/$artistName.songlist
 
 #Calculate average words per song and print user message with further options
 declare -i averageWord=$(( $totalWordCount / $songCount ))
@@ -116,12 +115,12 @@ do
 	if [[ $options == 1 ]];
 	then
 		printf "The full list of songs by $artistNameSpaced:\n********************************************\n"
-		cat ../tmp/$artist.lyrics | jq 'if .lyrics then .song else empty end'
+		cat ../tmp/$artistName.lyrics | jq 'if .lyrics then .song else empty end'
 	#Option 2: list songs with lyrics available
 	elif [[ $options == 2 ]];
 	then
 		#Get songs with lyrics
-		cat ../tmp/$artist.lyrics | jq 'if .lyrics != "" then .song else empty end' > ../tmp/$artist.lyricedsongs
+		cat ../tmp/$artistName.lyrics | jq 'if .lyrics != "" then .song else empty end' > ../tmp/$artistName.lyricedsongs
 		#Print INT: song name for all songs with lyrics available
 		echo Lyrics are available for the following songs:
 		declare -i lineOptions=1
@@ -129,17 +128,17 @@ do
 		do
 			echo "$lineOptions: $line"
 			lineOptions=$((lineOptions+1))			
-		done < ../tmp/$artist.lyricedsongs
+		done < ../tmp/$artistName.lyricedsongs
 
 		#User prompt for song selection
 		echo Please enter the number matching the desired song:
 		read userOption
 		#Get song name from user input
-		chosenSong=$(sed -n ""$userOption"p" ../tmp/$artist.lyricedsongs)
+		chosenSong=$(sed -n ""$userOption"p" ../tmp/$artistName.lyricedsongs)
 		chosenSong=$(echo ${chosenSong//\"/})
 		#Print lyrics for target song
 		printf "*****************\n$chosenSong by $artistNameSpaced\n*****************\n"
-		cat ../tmp/$artist.lyrics | jq "if select(.song==\"$chosenSong\") then .lyrics else empty end"
+		cat ../tmp/$artistName.lyrics | jq "if select(.song==\"$chosenSong\") then .lyrics else empty end"
 		#Prompt for user to display word count for target song
 		printf "*****************\nDisplay word count for $chosenSong? (Y/N)\n"
 		read wordCountInput
@@ -148,7 +147,7 @@ do
 		if [ $wordCountInput == "y" ] || [ $wordCountInput == "Y" ];
 		then
 			echo "*****************"
-			cat ../tmp/$artist.lyrics | jq "if select(.song==\"$chosenSong\") then .wordCount else empty end"
+			cat ../tmp/$artistName.lyrics | jq "if select(.song==\"$chosenSong\") then .wordCount else empty end"
 			echo "*****************"
 		fi
 	#Option 3: see the stats again
@@ -162,6 +161,6 @@ do
 
 done
 
-rm ../tmp/$artist.*
+rm ../tmp/$artistName.*
 exit
 
