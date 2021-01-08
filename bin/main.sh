@@ -18,7 +18,7 @@ offset="&offset=${offset_val}"
 url=${mb_endpoint}\"${artist}\"${limit}${offset}
 
 #Perform first curl and store data
-curl -s $url -H "Accept: application/json" > ../tmp/$artist.data-$offset_val
+curl -s $url -H "Accept: application/json" -H "User-Agent: MyAppliction/1.0.0 (jodiebarnsley27@gmail.com)" > ../tmp/$artist.data-$offset_val
 
 #Extract songs with artist-credit[].name matching users artist and store
 cat ../tmp/$artist.data-$offset_val | jq -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistNameSpaced\") | {title: .title, artist: .\"artist-credit\"[].name}" > ../tmp/$artist.songlist
@@ -43,7 +43,7 @@ then
         offset="&offset=${offset_val}"
         url=${mb_endpoint}\"${artist}\"${limit}${offset}
 		#Perform the curl
-        curl -s $url -H "Accept: application/json" > ../tmp/$artist.data-$offset_val
+        curl -s $url -H "Accept: application/json" -H "User-Agent: MyAppliction/1.0.0 (jodiebarnsley27@gmail.com)" > ../tmp/$artist.data-$offset_val
 		#Extract songs with artist-credit[].name matching users artist and store
         cat ../tmp/$artist.data-$offset_val | jq -c -c ".recordings[] | select(.\"artist-credit\"[].name==\"$artistNameSpaced\") | {title: .title, artist: .\"artist-credit\"[].name}" >> ../tmp/$artist.songlist
 
@@ -75,6 +75,7 @@ do
 	songName=$(echo ${songName//\"/})
 	songNameSpaced=$songName
 	songName=$(echo ${songName// /%20})
+    songName=$(echo ${songName////%20})
 	#Produce lyric API
 	lyric_endpoint="https://private-anon-b06597b77b-lyricsovh.apiary-proxy.com/v1"
 	data="${artistName}/${songName}"
